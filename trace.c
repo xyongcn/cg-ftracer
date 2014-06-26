@@ -38,15 +38,10 @@
 #include <linux/poll.h>
 #include <linux/nmi.h>
 #include <linux/fs.h>
-
-#include <linux/vmalloc.h>
-#include <linux/gfp.h>
-//include zlib
-#include <linux/zlib.h>
+#include <linux/coresight-stm.h>
 
 #include "trace.h"
 #include "trace_output.h"
-
 
 #include <linux/ip.h>
 #include <net/tcp.h>
@@ -58,7 +53,10 @@
 #include <linux/inetdevice.h>
 #include <linux/in.h>
 
-char *ifname = "eth0";
+//include zlib
+#include <linux/zlib.h>
+
+char *ifname = "wlan0";
 //__u32 dstip = 0x0a6c1883;
 char ser_ip[16] = "192.168.2.67";
 __s16 dstport = 8000;
@@ -624,58 +622,11 @@ int trace_get_user(struct trace_parser *parser, const char __user *ubuf,
 out:
 	return ret;
 }
-//wujingbang: add trace_seq_to_gz
-int trace_seq_to_gz(struct trace_seq *s, char __user *ubuf, size_t cnt)
-{
-	int ret;
-//	unsigned have;
-	z_stream stream;
-	stream.workspace = vmalloc(zlib_deflate_workspacesize(MAX_WBITS, MAX_MEM_LEVEL));
-	ret = zlib_deflateInit(&stream, Z_BEST_COMPRESSION);
-	if (ret != Z_OK)
-		return ret;
-	
-	static unsigned file_no = 0;
-	char str0[30] = "/data/";
-	char str1[20];
-	sprintf(str1, "%d", file_no);
-	file_no++;
-	strcat(str0, str1);
-	struct file *out_fp = filp_open(str0, O_RDWR | O_APPEND | O_CREAT, 0777); 
-	
-	void *out_buf = kmalloc(cnt, GFP_ATOMIC);
 
-        stream.next_in = s->buffer + s->readpos;
-        stream.avail_in = cnt;
-        stream.total_in = 0;
-        stream.next_out = out_buf;
-        stream.avail_out = cnt;
-        stream.total_out = 0;
-
-	ret = zlib_deflate(&stream, Z_FINISH);
-
-	mm_segment_t old_fs;
-	old_fs = get_fs();
-	set_fs(KERNEL_DS);
-	//\D3\EB\C4ڴ\E6\D3йصĲ\D9\D7\F7
-	out_fp->f_op->write(out_fp, (char*)out_buf, cnt, &out_fp->f_pos);
-	set_fs(old_fs);
-
-	(void)zlib_deflateEnd(&stream);
-
-	
-
-//	ret = copy_to_user(ubuf, out_buf, cnt);
-	kfree(out_buf);
-	vfree(stream.workspace);
-	return 0;
-}
 ssize_t trace_seq_to_user(struct trace_seq *s, char __user *ubuf, size_t cnt)
 {
 	int len;
-	int ret = 0;
-	
-	static flag = 1;
+	int ret;
 
 	if (!cnt)
 		return 0;
@@ -686,9 +637,7 @@ ssize_t trace_seq_to_user(struct trace_seq *s, char __user *ubuf, size_t cnt)
 	len = s->len - s->readpos;
 	if (cnt > len)
 		cnt = len;
-//	if(flag--)
-//		ret = copy_to_user(ubuf, s->buffer + s->readpos, cnt);
-	ret = trace_seq_to_gz(s, ubuf, cnt);
+	ret = copy_to_user(ubuf, s->buffer + s->readpos, cnt);
 	if (ret == cnt)
 		return -EFAULT;
 
@@ -1701,6 +1650,7 @@ int trace_array_vprintk(struct trace_array *tr,
 	memcpy(&entry->buf, trace_buf, len);
 	entry->buf[len] = '\0';
 	if (!filter_check_discard(call, entry, buffer, event)) {
+		stm_log(OST_ENTITY_TRACE_PRINTK, entry->buf, len + 1);
 		ring_buffer_unlock_commit(buffer, event);
 		ftrace_trace_stack(buffer, irq_flags, 6, pc);
 	}
@@ -3344,7 +3294,6 @@ static int tracing_open_pipe(struct inode *inode, struct file *filp)
 	nonseekable_open(inode, filp);
 out:
 	mutex_unlock(&trace_types_lock);
-
 	return ret;
 
 fail:
@@ -3438,9 +3387,9 @@ static int tracing_wait_pipe(struct file *filp)
 		}
 
 		mutex_unlock(&iter->mutex);
-//wujingbang
-		//iter->trace->wait_pipe(iter);
-		poll_wait_pipe(iter);
+
+		iter->trace->wait_pipe(iter);
+
 		mutex_lock(&iter->mutex);
 
 		if (signal_pending(current))
@@ -3462,6 +3411,7 @@ static int tracing_wait_pipe(struct file *filp)
 	return 1;
 }
 
+/*
 //wujingbang
 static void write_file(char * file_name, char * buf)
 {
@@ -3476,6 +3426,7 @@ static void write_file(char * file_name, char * buf)
 	filp_close(over_file,NULL);
 	return;
 }
+*/
 #define SPD_BUFFER_SIZE 1
 #define DATA_PAGE_SIZE 4096
 struct buffer_ref {
@@ -3629,15 +3580,19 @@ static int connect_to_addr(struct socket *sock)//get aim ip and port, connect it
 
 int kernel_send(struct socket *sock, void *buf, int len)
 {
+	int ret;
 //	printk("**********kernel_send with len = %d*************\n", len);
 	struct msghdr msg = {.msg_flags = MSG_DONTWAIT|MSG_NOSIGNAL};
 	struct kvec iov;
 	iov.iov_base = buf;
         iov.iov_len = len;
-	int ret = kernel_sendmsg(sock, &msg, &iov, 1, len);
+	
+	ret = kernel_sendmsg(sock, &msg, &iov, 1, len);
 //	printk("*********kernel_send return %d****************\n", ret);
-	if (ret != len)
+	if (ret != len) {
+		printk("**kernel_send with len = %d, return %d**\n", len, ret);
     		return -1;
+	}
 	else 
 		return ret;
 }
@@ -3647,13 +3602,18 @@ int kernel_send(struct socket *sock, void *buf, int len)
   */
 int compress2send(void * buf_in, int dataSize, void * buf_out, int outSize)
 {
-//	printk("******************compress2send************************\n");
+	
 	z_stream stream;
-	unsigned int workspace_size = zlib_deflate_workspacesize(MAX_WBITS, MAX_MEM_LEVEL);
+	int flush,have; 
+	unsigned int workspace_size;
+
+//	printk("******************compress2send************************\n");
+
+	workspace_size = zlib_deflate_workspacesize(MAX_WBITS, MAX_MEM_LEVEL);
 	stream.workspace = kmalloc(workspace_size, GFP_KERNEL);
 	zlib_deflateInit(&stream, 1);//Z_BEST_COMPRESSION);
 
-	int flush = Z_FINISH;
+	flush = Z_FINISH;
 	stream.next_in = buf_in;
 	stream.avail_in = dataSize;
 	
@@ -3661,7 +3621,7 @@ int compress2send(void * buf_in, int dataSize, void * buf_out, int outSize)
 	stream.next_out = buf_out;
 	zlib_deflate(&stream, flush);
 
-	int have = outSize - stream.avail_out;
+	have = outSize - stream.avail_out;
 	(void)zlib_deflateEnd(&stream);
 	kfree(stream.workspace);
 
@@ -3669,9 +3629,8 @@ int compress2send(void * buf_in, int dataSize, void * buf_out, int outSize)
 }
 
 
-int udp_send_init()
+int udp_send_init(void)
 {
-	
     int err = 0;
    
     err = sock_create_kern(PF_INET, SOCK_DGRAM, IPPROTO_UDP, &sock);
@@ -3696,7 +3655,7 @@ int udp_send_init()
 
     return 0;
 
-kmalloc_error:
+//kmalloc_error:
 bind_error:
 connect_error:
     sk_release_kernel(sock->sk);
@@ -3711,23 +3670,30 @@ struct buffer_data_page {
 	local_t		 commit;	/* write committed index */
 	unsigned char	 data[];	/* data of buffer page */
 };
+
+/*
+ * Consumer reader.
+ */
 static ssize_t
 tracing_read_pipe(struct file *file, char __user *ubuf,
 		  size_t cnt, loff_t *ppos)
 {
-	printk("******************tracing_read_pipe************************\n");
-	struct trace_iterator *iter = file->private_data;
-	struct buffer_ref *ref;
-	int entries, size, i;
+	
+	struct buffer_ref *ref = NULL;
+	void *buf_out;
+	int entries;
+	int size, i;
 	size_t ret;
 	int sret;
 	struct buffer_data_page *bpage;
+	struct trace_iterator *iter = file->private_data;
+	printk("******************tracing_read_pipe************************\n");
 	ret = udp_send_init();
 	if (ret == -1) {
 		printk("udp_send_init fail! with ret = %d\n", ret);
 		goto out;
 	}
-	void *buf_out = kmalloc(DATA_PAGE_SIZE, GFP_KERNEL);
+	buf_out = kmalloc(DATA_PAGE_SIZE, GFP_KERNEL);
 	if (!buf_out) {
 		printk("buf_out kmalloc fail!\n");
 		goto out;
@@ -3744,21 +3710,24 @@ tracing_read_pipe(struct file *file, char __user *ubuf,
 		printk("ring_buffer_alloc_read_page fail!\n");
 		goto out;
 	}	
+	
+//	trace_access_lock(iter->cpu_file);
 again:
 
-	sret = tracing_wait_pipe(file);
-	if (sret <= 0)
-		goto again;
+	//sret = tracing_wait_pipe(file);
+	//if (sret <= 0)
+	//	goto again;
 	/* wait when tracing is finished */
 	if (trace_empty(iter)) {
 		sret = 0;
+//		printk("trace_empty!\n");
 		goto again;
 	}
 	
-	trace_access_lock(iter->cpu_file);
+	
 	entries = ring_buffer_entries_cpu(iter->tr->buffer, iter->cpu_file);
 	if(!entries) {
-		printk("entries empty!\n");
+		printk("entries empty! %d\n", iter->cpu_file);
 		goto again;
 	}
 	for (i = 0; i < SPD_BUFFER_SIZE && entries; i++) {
@@ -3766,9 +3735,11 @@ again:
 
 		r = ring_buffer_read_page(ref->buffer, &ref->page,
 					  cnt, iter->cpu_file, 1);
-		if (r < 0)
-			goto out;
 
+		if (r < 0) {
+			printk("after ring_buffer_read_page, i=%d\n", i);
+			goto again;
+		}
 		/*
 		 * zero out any left over data, this is going to
 		 * user land.
@@ -3777,12 +3748,14 @@ again:
 		if (size < PAGE_SIZE)
 			memset(ref->page + size, 0, PAGE_SIZE - size);
 		r = compress2send(ref->page, DATA_PAGE_SIZE, buf_out, DATA_PAGE_SIZE);
-		if (r == -1)
+		if (r == -1){
+			printk("compress2send failed!\n");
 			goto out;
+		}
 	}
 
 
-	trace_access_unlock(iter->cpu_file);
+//	trace_access_unlock(iter->cpu_file);
 //	bpage = page_address(ref->page);
 	bpage = (struct buffer_data_page *)(ref->page);
 	local_set(&bpage->commit, 0);
@@ -4057,7 +4030,7 @@ tracing_mark_write(struct file *filp, const char __user *ubuf,
 	int nr_pages = 1;
 	ssize_t written;
 	void *page1;
-	void *page2;
+	void *page2 = NULL;
 	int offset;
 	int size;
 	int len;
@@ -4128,9 +4101,11 @@ tracing_mark_write(struct file *filp, const char __user *ubuf,
 	if (entry->buf[cnt - 1] != '\n') {
 		entry->buf[cnt] = '\n';
 		entry->buf[cnt + 1] = '\0';
-	} else
+		stm_log(OST_ENTITY_TRACE_MARKER, entry->buf, cnt + 2);
+	} else {
 		entry->buf[cnt] = '\0';
-
+		stm_log(OST_ENTITY_TRACE_MARKER, entry->buf, cnt + 1);
+	}
 	ring_buffer_unlock_commit(buffer, event);
 
 	written = cnt;
@@ -4358,7 +4333,6 @@ static int tracing_buffers_release(struct inode *inode, struct file *file)
 }
 
 
-
 static void buffer_pipe_buf_release(struct pipe_inode_info *pipe,
 				    struct pipe_buffer *buf)
 {
@@ -4414,135 +4388,66 @@ static void buffer_spd_release(struct splice_pipe_desc *spd, unsigned int i)
 	spd->partial[i].private = 0;
 }
 
-
-//PIPE_DEF_BUFFERS
 static ssize_t
 tracing_buffers_splice_read(struct file *file, loff_t *ppos,
 			    struct pipe_inode_info *pipe, size_t len,
 			    unsigned int flags)
-{////
+{
 	struct ftrace_buffer_info *info = file->private_data;
-	struct trace_iterator *iter = file->private_data;
-//	struct partial_page partial_def[SPD_BUFFER_SIZE];
-//	struct page *pages_def[SPD_BUFFER_SIZE];
-//	struct splice_pipe_desc spd = {
-//		.pages		= pages_def,
-//		.partial	= partial_def,
-//		.flags		= flags,
-//		.ops		= &buffer_pipe_buf_ops,
-//		.spd_release	= buffer_spd_release,
-//	};
+	struct partial_page partial_def[PIPE_DEF_BUFFERS];
+	struct page *pages_def[PIPE_DEF_BUFFERS];
+	struct splice_pipe_desc spd = {
+		.pages		= pages_def,
+		.partial	= partial_def,
+		.flags		= flags,
+		.ops		= &buffer_pipe_buf_ops,
+		.spd_release	= buffer_spd_release,
+	};
 	struct buffer_ref *ref;
 	int entries, size, i;
 	size_t ret;
 
-///////////////////////////////////////////////////////////////////////////
-		int flush;
-		unsigned have;
-		z_stream stream;
-		
-		int len_0, ret_0;
-//		int spd_page_nr = 0;
-		
-		
-		long file_number = 0;
-		struct file *out_fp;
-		char static_file_name[20] = "/sdcard/";
-		char file_name_plus_cpu[10];
-		sprintf(file_name_plus_cpu, "%d", info->cpu);
-		strcat(static_file_name, file_name_plus_cpu);
-		char file_name_plus_number[10];
-		char * file_name[20];
+	if (splice_grow_spd(pipe, &spd))
+		return -ENOMEM;
 
-		
-
-//	spd.pages = kmalloc(SPD_BUFFER_SIZE * sizeof(struct page *), GFP_KERNEL);
-//	if (!spd.pages)
-//			goto out;
-//	spd.partial = kmalloc(SPD_BUFFER_SIZE * sizeof(struct partial_page), GFP_KERNEL);
-//	if (!spd.partial)
-//			goto out;
-	size_t out_buf_size = SPD_BUFFER_SIZE * PAGE_SIZE;
-	void *out_buf = kmalloc(out_buf_size, GFP_KERNEL);
-	if (!out_buf)
-			goto out;
-	unsigned int workspace_size = zlib_deflate_workspacesize(MAX_WBITS, MAX_MEM_LEVEL);
-
-	int flag = 1;
-	ref = kzalloc(sizeof(*ref), GFP_KERNEL);
-	if (!ref)
-			goto out;
-	int sret;
-///////////////////////////////////////////////////////////////////////////
-
-again:
-//	if (splice_grow_spd(pipe, &spd))
-//		return -ENOMEM;
-//wujingbang: \B7\D6\C5\E4\BFռ\E4\D4ݲ\BB\BC\EC\B2\E2\B4\ED\CE\F3
-	sret = tracing_wait_pipe(file);
-	if (sret <= 0)
-		goto again;
-	/* wait when tracing is finished */
-	if (trace_empty(iter)) {
-		struct file *over_file = filp_open("/sdcard/TRACE_EMPTY", O_RDWR | O_APPEND | O_CREAT, 0777); 
-		char* over_buffer = "TRACE_EMPTY!!";
-		
-		mm_segment_t old_fs;
-		old_fs = get_fs();
-		set_fs(KERNEL_DS);
-		//write to file
-		over_file->f_op->write(over_file, over_buffer, 14, &over_file->f_pos);
-		set_fs(old_fs);
-		sret = 0;
-		goto again;
+	if (*ppos & (PAGE_SIZE - 1)) {
+		WARN_ONCE(1, "Ftrace: previous read must page-align\n");
+		ret = -EINVAL;
+		goto out;
 	}
 
-	stream.workspace = kmalloc(workspace_size, GFP_ATOMIC);
-	ret_0 = zlib_deflateInit(&stream, 1);//Z_BEST_COMPRESSION);
-	//out_buf!
-	
-	
-	
-	sprintf(file_name_plus_number, "%ld", file_number);
-	strcpy(file_name, static_file_name);
+	if (len & (PAGE_SIZE - 1)) {
+		WARN_ONCE(1, "Ftrace: splice_read should page-align\n");
+		if (len < PAGE_SIZE) {
+			ret = -EINVAL;
+			goto out;
+		}
+		len &= PAGE_MASK;
+	}
 
-	strcat(file_name, file_name_plus_number);	
-	out_fp = filp_open(file_name, O_RDWR | O_APPEND | O_CREAT, 0777); 
-	
 	trace_access_lock(info->cpu);
 	entries = ring_buffer_entries_cpu(info->tr->buffer, info->cpu);
 
-	for (i = 0; i < SPD_BUFFER_SIZE && entries; i++) {
+	for (i = 0; i < pipe->buffers && len && entries; i++, len -= PAGE_SIZE) {
 		struct page *page;
 		int r;
-		
+
+		ref = kzalloc(sizeof(*ref), GFP_KERNEL);
+		if (!ref)
+			break;
+
 		ref->ref = 1;
 		ref->buffer = info->tr->buffer;
-		if (flag){
-			ref->page = ring_buffer_alloc_read_page(ref->buffer, info->cpu);
-			flag = 0;
-		}
-		
+		ref->page = ring_buffer_alloc_read_page(ref->buffer, info->cpu);
 		if (!ref->page) {
 			kfree(ref);
-			goto out;
+			break;
 		}
 
 		r = ring_buffer_read_page(ref->buffer, &ref->page,
 					  len, info->cpu, 1);
 		if (r < 0) {
-			//\B6\C1ȡ\CBٶȸ\CF\C9\CF\C1\CBд\C8\EB\CBٶ\C8
-			struct file *over_file = filp_open("/sdcard/OVER_EVENT", O_RDWR | O_APPEND | O_CREAT, 0777); 
-				char* over_buffer = "TRACE_EMPTY!!";
-		
-				mm_segment_t old_fs;
-				old_fs = get_fs();
-				set_fs(KERNEL_DS);
-				//write to file
-				over_file->f_op->write(over_file, over_buffer, 14, &over_file->f_pos);
-				set_fs(old_fs);
 			ring_buffer_free_read_page(ref->buffer, ref->page);
-			flag = 1;
 			kfree(ref);
 			break;
 		}
@@ -4554,7 +4459,7 @@ again:
 		size = ring_buffer_page_len(ref->page);
 		if (size < PAGE_SIZE)
 			memset(ref->page + size, 0, PAGE_SIZE - size);
-/*
+
 		page = virt_to_page(ref->page);
 
 		spd.pages[i] = page;
@@ -4562,74 +4467,30 @@ again:
 		spd.partial[i].offset = 0;
 		spd.partial[i].private = (unsigned long)ref;
 		spd.nr_pages++;
-*/
-		page = virt_to_page(ref->page);
-	    //designate the input data.
-		stream.next_in = page;
-		/*
-		 * 
-		 */
-		stream.avail_in = PAGE_SIZE;
+		*ppos += PAGE_SIZE;
 
-		flush = (i == SPD_BUFFER_SIZE - 1) ? Z_FINISH : Z_NO_FLUSH;
-		if(flush == Z_FINISH)
-			file_number++;
-	    /* run deflate() on input until output buffer not full, finish
-	          	compression if all of source has been read in */
-	    do {
-		   	stream.avail_out = out_buf_size;
-		   	stream.next_out = out_buf;
-			ret_0 = zlib_deflate(&stream, flush);    /* no bad return value */
-			//assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
-			have = out_buf_size - stream.avail_out;
-			mm_segment_t old_fs;
-			old_fs = get_fs();
-			set_fs(KERNEL_DS);
-			//write to file
-			out_fp->f_op->write(out_fp, (char*)out_buf, have, &out_fp->f_pos);
-			set_fs(old_fs);
-		} while (stream.avail_out == 0);
-		if(flush == Z_FINISH){
-			(void)zlib_deflateEnd(&stream);
-//			break;
-		}
-		
 		entries = ring_buffer_entries_cpu(info->tr->buffer, info->cpu);
 	}
 
 	trace_access_unlock(info->cpu);
-//	spd.nr_pages = i;
+	spd.nr_pages = i;
 
-//	/* did we read anything? */
-//	if (!spd.nr_pages) {
-//		if (flags & SPLICE_F_NONBLOCK)
-//			ret = -EAGAIN;
-//		else
-//			ret = 0;
-//		/* TODO: block */
-//		goto again;
-//	}
-//wujingbang  \BD\AB\CA\FD\BE\DDѹ\CB\F5\CA\E4\B3\F6
-	
-	
+	/* did we read anything? */
+	if (!spd.nr_pages) {
+		if (flags & SPLICE_F_NONBLOCK)
+			ret = -EAGAIN;
+		else
+			ret = 0;
+		/* TODO: block */
+		goto out;
+	}
 
-	
-			
-//////////////////////////////////////////////////////////////////////////////////
-
-	filp_close(out_fp,NULL);
-	
-	
-	kfree(stream.workspace);
-	goto again;
-//	ret = splice_to_pipe(pipe, &spd);
-//	splice_shrink_spd(pipe, &spd);
+	ret = splice_to_pipe(pipe, &spd);
+	splice_shrink_spd(pipe, &spd);
 out:
-//	kfree(spd.pages);
-//	kfree(spd.partial);
-	kfree(out_buf);
 	return ret;
 }
+
 static const struct file_operations tracing_buffers_fops = {
 	.open		= tracing_buffers_open,
 	.read		= tracing_buffers_read,
