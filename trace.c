@@ -3581,12 +3581,12 @@ static int connect_to_addr(struct socket *sock)//get aim ip and port, connect it
 int kernel_send(struct socket *sock, void *buf, int len)
 {
 	int ret;
-//	printk("**********kernel_send with len = %d*************\n", len);
+	
 	struct msghdr msg = {.msg_flags = MSG_DONTWAIT|MSG_NOSIGNAL};
 	struct kvec iov;
 	iov.iov_base = buf;
         iov.iov_len = len;
-	
+	printk("**********kernel_send with len = %d*************\n", len);
 	ret = kernel_sendmsg(sock, &msg, &iov, 1, len);
 //	printk("*********kernel_send return %d****************\n", ret);
 	if (ret != len) {
@@ -3624,7 +3624,7 @@ int compress2send(void * buf_in, int dataSize, void * buf_out, int outSize)
 	have = outSize - stream.avail_out;
 	(void)zlib_deflateEnd(&stream);
 	kfree(stream.workspace);
-
+	
 	return kernel_send(sock, buf_out, have);
 }
 
@@ -3671,6 +3671,7 @@ struct buffer_data_page {
 	unsigned char	 data[];	/* data of buffer page */
 };
 
+#define BUF_PAGE_HDR_SIZE offsetof(struct buffer_data_page, data)
 /*
  * Consumer reader.
  */
@@ -3678,16 +3679,23 @@ static ssize_t
 tracing_read_pipe(struct file *file, char __user *ubuf,
 		  size_t cnt, loff_t *ppos)
 {
-	
-	struct buffer_ref *ref = NULL;
-	void *buf_out;
-	int entries;
-	int size, i;
-	size_t ret;
-	int sret;
 	struct buffer_data_page *bpage;
 	struct trace_iterator *iter = file->private_data;
-	printk("******************tracing_read_pipe************************\n");
+	struct buffer_ref *ref = NULL;
+	struct ring_buffer *buffer = iter->tr->buffer;
+	void *buf_out;
+	void *buf_out_4;
+	void *buf_4page;
+//	int entries;
+	int size;
+	size_t ret;
+//	int sret;
+	int cpu_file;
+	int r;
+	int cpu;
+	
+
+	cpu_file = iter->cpu_file;
 	ret = udp_send_init();
 	if (ret == -1) {
 		printk("udp_send_init fail! with ret = %d\n", ret);
@@ -3698,6 +3706,16 @@ tracing_read_pipe(struct file *file, char __user *ubuf,
 		printk("buf_out kmalloc fail!\n");
 		goto out;
 	}
+	buf_out_4 = kmalloc(DATA_PAGE_SIZE * 4, GFP_KERNEL);
+	if (!buf_out_4) {
+		printk("buf_out kmalloc fail!\n");
+		goto out;
+	}
+	buf_4page = kmalloc(DATA_PAGE_SIZE * 4, GFP_KERNEL);
+	if (!buf_4page) {
+		printk("buf_out kmalloc fail!\n");
+		goto out;
+	}
 	ref = kzalloc(sizeof(*ref), GFP_KERNEL);
 	if (!ref) {
 		printk("ref kmalloc fail!\n");
@@ -3705,12 +3723,13 @@ tracing_read_pipe(struct file *file, char __user *ubuf,
 	}
 	ref->ref = 1;
 	ref->buffer = iter->tr->buffer;
-	ref->page = ring_buffer_alloc_read_page(ref->buffer, iter->cpu_file);
-	if (!ref->page) {
-		printk("ring_buffer_alloc_read_page fail!\n");
-		goto out;
-	}	
+		
 	
+	////////////////////////////////////////////////////
+	tracing_reset_current_online_cpus();
+	tracing_on();
+	////////////////////////////////////////////////////
+	printk("******************tracing_read_pipe************************\n");
 //	trace_access_lock(iter->cpu_file);
 again:
 
@@ -3718,32 +3737,33 @@ again:
 	//if (sret <= 0)
 	//	goto again;
 	/* wait when tracing is finished */
-	if (trace_empty(iter)) {
-		sret = 0;
+//	if (trace_empty(iter)) {
+//		sret = 0;
 //		printk("trace_empty!\n");
-		goto again;
-	}
+//		goto again;
+//	}
 	
-	
-	entries = ring_buffer_entries_cpu(iter->tr->buffer, iter->cpu_file);
-	if(!entries) {
-		printk("entries empty! %d\n", iter->cpu_file);
-		goto again;
-	}
-	for (i = 0; i < SPD_BUFFER_SIZE && entries; i++) {
-		int r;
-
+/*	
+	if (cpu_file > TRACE_PIPE_ALL_CPU) {
+		ref->page = ring_buffer_alloc_read_page(ref->buffer, cpu_file);
+		if (!ref->page) {
+			printk("ring_buffer_alloc_read_page fail!\n");
+			goto out;
+		}
+		if (ring_buffer_empty_cpu(buffer, cpu_file))
+			goto out;
+		
 		r = ring_buffer_read_page(ref->buffer, &ref->page,
-					  cnt, iter->cpu_file, 1);
+					  cnt, cpu_file, 0);
 
 		if (r < 0) {
-			printk("after ring_buffer_read_page, i=%d\n", i);
+			printk("after ring_buffer_read_page\n");
 			goto again;
 		}
-		/*
-		 * zero out any left over data, this is going to
-		 * user land.
-		 */
+		//
+		//  zero out any left over data, this is going to
+		// user land.
+		// 
 		size = ring_buffer_page_len(ref->page);
 		if (size < PAGE_SIZE)
 			memset(ref->page + size, 0, PAGE_SIZE - size);
@@ -3752,15 +3772,58 @@ again:
 			printk("compress2send failed!\n");
 			goto out;
 		}
+		goto again;
+
+	}
+*/
+	printk("memset buf_4page \n");
+	memset(buf_4page, 0, DATA_PAGE_SIZE * 4);
+	for_each_tracing_cpu(cpu) {
+		printk("cpu: %d \n", cpu);
+		ref->page = ring_buffer_alloc_read_page(ref->buffer, cpu);
+		if (!ref->page) {
+			printk("ring_buffer_alloc_read_page fail!\n");
+			goto out;
+		}
+		if (ring_buffer_empty_cpu(buffer, cpu)) {
+			printk("cpu: %d continue \n", cpu);
+			continue;
+		}
+		r = ring_buffer_read_page(ref->buffer, &ref->page,
+					  cnt, cpu, 0);
+
+		if (r < 0) {
+			printk("after ring_buffer_read_page");
+			goto again;
+		}
+		//
+		//  zero out any left over data, this is going to
+		// user land.
+		// 
+//		size = ring_buffer_page_len(ref->page);
+		size = r;
+		size += BUF_PAGE_HDR_SIZE;
+//		if (size < PAGE_SIZE)
+//			memset(ref->page + size, 0, PAGE_SIZE - size);
+		printk("size = %d, r = %d\n",size, r);
+		
+		memcpy(buf_4page + DATA_PAGE_SIZE*cpu, ref->page, size);
+		ring_buffer_free_read_page(ref->buffer, ref->page);
+	}
+	r = compress2send(buf_4page, DATA_PAGE_SIZE * 4, buf_out_4, DATA_PAGE_SIZE * 4);
+	if (r == -1){
+			printk("compress2send failed!\n");
+			goto out;
 	}
 
+	goto again;
 
 //	trace_access_unlock(iter->cpu_file);
 //	bpage = page_address(ref->page);
-	bpage = (struct buffer_data_page *)(ref->page);
-	local_set(&bpage->commit, 0);
+//	bpage = (struct buffer_data_page *)(ref->page);
+//	local_set(&bpage->commit, 0);
 
-	goto again;
+//	goto again;
 	
 out:
 //	printk("OUT!! Something is wrong!\n");

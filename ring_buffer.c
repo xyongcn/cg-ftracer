@@ -379,8 +379,12 @@ static void rb_init_page(struct buffer_data_page *bpage)
  */
 size_t ring_buffer_page_len(void *page)
 {
-	return local_read(&((struct buffer_data_page *)page)->commit)
-		+ BUF_PAGE_HDR_SIZE;
+	int size = local_read(&((struct buffer_data_page *)page)->commit);
+	if ( size < 0 )
+		printk("size < 0 !!!\n");
+	return size + BUF_PAGE_HDR_SIZE;
+	//return local_read(&((struct buffer_data_page *)page)->commit)
+	//	+ BUF_PAGE_HDR_SIZE;
 }
 
 /*
@@ -938,7 +942,7 @@ static int rb_check_pages(struct ring_buffer_per_cpu *cpu_buffer)
 	struct buffer_page *bpage, *tmp;
 
 	rb_head_page_deactivate(cpu_buffer);
-	//检查双向链表
+
 	if (RB_WARN_ON(cpu_buffer, head->next->prev != head))
 		return -1;
 	if (RB_WARN_ON(cpu_buffer, head->prev->next != head))
@@ -1042,7 +1046,7 @@ rb_allocate_cpu_buffer(struct ring_buffer *buffer, int cpu)
 		goto fail_free_buffer;
 
 	rb_check_bpage(cpu_buffer, bpage);
-	//reader_page是额外的一页
+
 	cpu_buffer->reader_page = bpage;
 	page = alloc_pages_node(cpu_to_node(cpu), GFP_KERNEL, 0);
 	if (!page)
@@ -1123,7 +1127,7 @@ struct ring_buffer *__ring_buffer_alloc(unsigned long size, unsigned flags,
 
 	if (!alloc_cpumask_var(&buffer->cpumask, GFP_KERNEL))
 		goto fail_free_buffer;
-	//向上取整数的意思,算出一共多少页
+
 	buffer->pages = DIV_ROUND_UP(size, BUF_PAGE_SIZE);
 	buffer->flags = flags;
 	buffer->clock = trace_clock_local;
@@ -1622,7 +1626,7 @@ rb_update_event(struct ring_buffer_per_cpu *cpu_buffer,
 		length -= RB_LEN_TIME_EXTEND;
 		delta = 0;
 	}
-//24
+
 	event->time_delta = delta;
 	length -= RB_EVNT_HDR_SIZE;
 	if (length > RB_MAX_SMALL_DATA || RB_FORCE_8BYTE_ALIGNMENT) {
@@ -1656,9 +1660,8 @@ rb_handle_head_page(struct ring_buffer_per_cpu *cpu_buffer,
 	 * forward, and protect against both readers on
 	 * other CPUs and writers coming in via interrupts.
 	 */
-	type = rb_head_page_set_update(cpu_buffer, next_page, 
-									tail_page,
-				       				RB_PAGE_HEAD);
+	type = rb_head_page_set_update(cpu_buffer, next_page, tail_page,
+				       RB_PAGE_HEAD);
 
 	/*
 	 * type can be one of four:
@@ -1802,7 +1805,7 @@ static unsigned rb_calculate_event_length(unsigned length)
 	if (length > RB_MAX_SMALL_DATA || RB_FORCE_8BYTE_ALIGNMENT)
 		length += sizeof(event.array[0]);
 
-	length += RB_EVNT_HDR_SIZE;//24/4
+	length += RB_EVNT_HDR_SIZE;
 	length = ALIGN(length, RB_ARCH_ALIGNMENT);
 
 	return length;
@@ -1892,6 +1895,7 @@ rb_move_tail(struct ring_buffer_per_cpu *cpu_buffer,
 	int ret;
 
 	next_page = tail_page;
+
 	rb_inc_page(cpu_buffer, &next_page);
 
 	/*
@@ -2017,8 +2021,8 @@ __rb_reserve_next(struct ring_buffer_per_cpu *cpu_buffer,
 
 	event = __rb_page_index(tail_page, tail);
 	kmemcheck_annotate_bitfield(event, bitfield);
-	rb_update_event(cpu_buffer, event, length, 
-					add_timestamp, delta);
+	rb_update_event(cpu_buffer, event, length, add_timestamp, delta);
+
 	local_inc(&tail_page->entries);
 
 	/*
@@ -3840,7 +3844,7 @@ void *ring_buffer_alloc_read_page(struct ring_buffer *buffer, int cpu)
 {
 	struct buffer_data_page *bpage;
 	struct page *page;
-	//给page分配内存
+
 	page = alloc_pages_node(cpu_to_node(cpu),
 				GFP_KERNEL | __GFP_NORETRY, 0);
 	if (!page)
@@ -3909,11 +3913,11 @@ int ring_buffer_read_page(struct ring_buffer *buffer,
 	struct buffer_page *reader;
 	unsigned long missed_events;
 	unsigned long flags;
-	unsigned int commit;
+	
 	unsigned int read;
 	u64 save_timestamp;
 	int ret = -1;
-
+	unsigned int commit = 0;
 	if (!cpumask_test_cpu(cpu, buffer->cpumask))
 		goto out;
 
@@ -4034,6 +4038,9 @@ int ring_buffer_read_page(struct ring_buffer *buffer,
 	cpu_buffer->lost_events = 0;
 
 	commit = local_read(&bpage->commit);
+
+	if ( commit <= 0) 
+		printk("commit <= 0 !!!\n");
 	/*
 	 * Set a flag in the commit field if we lost events
 	 */
@@ -4060,7 +4067,11 @@ int ring_buffer_read_page(struct ring_buffer *buffer,
 	raw_spin_unlock_irqrestore(&cpu_buffer->reader_lock, flags);
 
  out:
-	return ret;
+//	return ret;
+	if ( ret < 0 )
+		return ret;
+	else
+		return commit;
 }
 EXPORT_SYMBOL_GPL(ring_buffer_read_page);
 
@@ -4102,4 +4113,3 @@ static int rb_cpu_notify(struct notifier_block *self,
 	return NOTIFY_OK;
 }
 #endif
-
