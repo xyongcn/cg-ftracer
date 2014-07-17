@@ -4055,6 +4055,7 @@ int ring_buffer_read_page(struct ring_buffer *buffer,
 			commit += sizeof(missed_events);
 		}
 		local_add(RB_MISSED_EVENTS, &bpage->commit);
+		printk("----------MISSED %ld-------------\n", missed_events);
 	}
 
 	/*
