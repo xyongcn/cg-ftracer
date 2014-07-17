@@ -1059,9 +1059,10 @@ void tracing_start(void)
 	if (buffer)
 		ring_buffer_record_enable(buffer);
 
-	buffer = max_tr.buffer;
-	if (buffer)
-		ring_buffer_record_enable(buffer);
+//wujingbang
+	//buffer = max_tr.buffer;
+	//if (buffer)
+	//	ring_buffer_record_enable(buffer);
 
 	arch_spin_unlock(&ftrace_max_lock);
 
@@ -3015,7 +3016,7 @@ static int __tracing_resize_ring_buffer(unsigned long size)
 	if (ret < 0)
 		return ret;
 
-	if (!current_trace->use_max_tr)
+	//if (!current_trace->use_max_tr)
 		goto out;
 
 	ret = ring_buffer_resize(max_tr.buffer, size);
@@ -3059,7 +3060,8 @@ static ssize_t tracing_resize_ring_buffer(unsigned long size)
 	mutex_lock(&trace_types_lock);
 
 	tracing_stop();
-
+	
+	//wujingbang
 	/* disable all cpu buffers */
 	for_each_tracing_cpu(cpu) {
 		if (global_trace.data[cpu])
@@ -3077,8 +3079,8 @@ static ssize_t tracing_resize_ring_buffer(unsigned long size)
 	for_each_tracing_cpu(cpu) {
 		if (global_trace.data[cpu])
 			atomic_dec(&global_trace.data[cpu]->disabled);
-		if (max_tr.data[cpu])
-			atomic_dec(&max_tr.data[cpu]->disabled);
+//		if (max_tr.data[cpu])
+//			atomic_dec(&max_tr.data[cpu]->disabled);
 	}
 
 	tracing_start();

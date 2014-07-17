@@ -1027,7 +1027,8 @@ rb_allocate_cpu_buffer(struct ring_buffer *buffer, int cpu)
 	struct ring_buffer_per_cpu *cpu_buffer;
 	struct buffer_page *bpage;
 	struct page *page;
-	int ret;
+	int ret = -1;
+//	unsigned ii;
 
 	cpu_buffer = kzalloc_node(ALIGN(sizeof(*cpu_buffer), cache_line_size()),
 				  GFP_KERNEL, cpu_to_node(cpu));
@@ -1056,9 +1057,19 @@ rb_allocate_cpu_buffer(struct ring_buffer *buffer, int cpu)
 
 	INIT_LIST_HEAD(&cpu_buffer->reader_page->list);
 
+//wujingbang
 	ret = rb_allocate_pages(cpu_buffer, buffer->pages);
-	if (ret < 0)
+//64819
+//	ii = 204800;//800MB
+//	if (cpu == 0){
+//		ret = rb_allocate_pages(cpu_buffer, ii);
+//		printk("cpu%d: allocate : %d pages\n", cpu, ii);
+//	}
+	
+	if (ret < 0){
+		printk("cpu%d: allocate failed!\n", cpu);
 		goto fail_free_reader;
+	}
 
 	cpu_buffer->head_page
 		= list_entry(cpu_buffer->pages, struct buffer_page, list);
@@ -1333,10 +1344,11 @@ int ring_buffer_resize(struct ring_buffer *buffer, unsigned long size)
 
 		rm_pages = buffer->pages - nr_pages;
 
-		for_each_buffer_cpu(buffer, cpu) {
+		//for_each_buffer_cpu(buffer, cpu) {
+		cpu = 0;
 			cpu_buffer = buffer->buffers[cpu];
 			rb_remove_pages(cpu_buffer, rm_pages);
-		}
+		//}
 		goto out;
 	}
 
@@ -1353,7 +1365,8 @@ int ring_buffer_resize(struct ring_buffer *buffer, unsigned long size)
 
 	new_pages = nr_pages - buffer->pages;
 
-	for_each_buffer_cpu(buffer, cpu) {
+	//for_each_buffer_cpu(buffer, cpu) {
+	cpu = 0;
 		for (i = 0; i < new_pages; i++) {
 			struct page *page;
 			/*
@@ -1375,12 +1388,12 @@ int ring_buffer_resize(struct ring_buffer *buffer, unsigned long size)
 			bpage->page = page_address(page);
 			rb_init_page(bpage->page);
 		}
-	}
+//	}
 
-	for_each_buffer_cpu(buffer, cpu) {
+//	for_each_buffer_cpu(buffer, cpu) {
 		cpu_buffer = buffer->buffers[cpu];
 		rb_insert_pages(cpu_buffer, &pages, new_pages);
-	}
+//	}
 
 	if (RB_WARN_ON(buffer, !list_empty(&pages)))
 		goto out_fail;
