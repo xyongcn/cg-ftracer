@@ -1,8 +1,8 @@
 #!/bin/bash
 function ergodic(){
-for file in `ls $1`
+for file in `ls $1/test`
 do
-local path="/home/wu/Desktop/parse"
+local path=$1
 local name=$file 
 echo $name
 #解压缩
@@ -21,6 +21,6 @@ done
 count=1
 while (( $count<=5))
 do
-INIT_PATH="/home/wu/Desktop/parse/test"
+INIT_PATH="."
 ergodic $INIT_PATH
 done
