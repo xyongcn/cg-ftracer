@@ -3611,12 +3611,13 @@ int kernel_send(struct socket *sock, void *buf, int len)
 	
 	intToByte(len, (unsigned char *)rebaseBuf);
 	memcpy(rebaseBuf + 4, buf, len);	
-	ret = bytesToInt((unsigned char*)rebaseBuf);
+	//ret = bytesToInt((unsigned char*)rebaseBuf);
 	iov.iov_base = rebaseBuf;
         iov.iov_len = rebaselen;
 //	printk("****kernel_send with len = %d, rebasedLen = %d*****\n", ret, rebaselen);
 	ret = kernel_sendmsg(sock, &msg, &iov, 1, len);
 //	printk("*********kernel_send return %d****************\n", ret);
+	kfree(rebaseBuf);
 	if (ret != rebaselen) {
 		printk("**kernel_send with len = %d, return %d**\n", len, ret);
     		return -1;
@@ -3851,6 +3852,7 @@ again:
 			printk("compress2send failed!\n");
 			goto out;
 		}
+		ring_buffer_free_read_page(ref->buffer, ref->page);
 		goto again;
 
 	}

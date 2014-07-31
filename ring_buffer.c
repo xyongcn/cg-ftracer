@@ -1689,13 +1689,21 @@ rb_handle_head_page(struct ring_buffer_per_cpu *cpu_buffer,
 
 	switch (type) {
 	case RB_PAGE_HEAD:
+		//wujingbang
+		if (cpu_buffer->cpu == 0 ) {
+			printk("================stop at CPU:%d (ring_buffer.c:1693)=============\n",cpu_buffer->cpu);
+			ftrace_stop();
+			if(!atomic_read(&cpu_buffer->record_disabled))
+				atomic_inc(&cpu_buffer->record_disabled);
+			return -1;
+		}
 		/*
 		 * We changed the head to UPDATE, thus
 		 * it is our responsibility to update
 		 * the counters.
 		 */
-		local_add(entries, &cpu_buffer->overrun);
-		local_sub(BUF_PAGE_SIZE, &cpu_buffer->entries_bytes);
+//		local_add(entries, &cpu_buffer->overrun);
+//		local_sub(BUF_PAGE_SIZE, &cpu_buffer->entries_bytes);
 
 		/*
 		 * The entries will be zeroed out when we move the
@@ -1997,7 +2005,7 @@ rb_move_tail(struct ring_buffer_per_cpu *cpu_buffer,
  out_reset:
 	/* reset write */
 	rb_reset_tail(cpu_buffer, tail_page, tail, length);
-
+	
 	return NULL;
 }
 
