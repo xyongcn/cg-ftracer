@@ -28,7 +28,13 @@ replace trace.c in kernel-rootdir/kernel/trace/ and build.
     5. 按顺序运行以下脚本启动ftrace
       * sh ftrace_init.sh
       * sh ftrace_start.sh
-
+4. 在192.168.1.37虚拟机上调用192.168.1.40机器上N5手机ftrace跟踪的方法
+    1. 建立免密码登陆的ssh，参考：http://www.2cto.com/os/201301/186673.html
+    2. 在1.40上运行ftrace数据接收程序（直接写文件的话不需要这一步）
+    3. 在1.37上利用如下两条命令就可以实现远程调用与数据取回。
+      * ssh root@192.168.1.40 'sh /home/wjbang/test.sh'
+      * scp root@192.168.1.40:/dev/shm/test/ftrace.data /home/wjbang/
+      * 注：test.sh是在1.40机器上对应的ftrace启动脚本
 4. 解析中间数据
     * 将数据整合到一个文件中
     * ./parse-for-all-graph {input file} {output file}
