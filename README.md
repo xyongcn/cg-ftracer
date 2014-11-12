@@ -5,6 +5,9 @@ Android kernel dynamic callgraph tracer for ftrace
 
 replace trace.c in kernel-rootdir/kernel/trace/ and build.
 
+注: android版本为4.4.3，代码编号为KTU84m， 内核为msm，分支为android-msm-hammerhead-3.4-kitkat-mr2。
+https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-mr2
+
 1. N5手机的连接方式
     * adb shell
 2. 利用adb和fastboot替换N5手机的内核
