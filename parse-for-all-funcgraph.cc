@@ -94,10 +94,10 @@ void replace(char* str) {
 	}
 	return;
 }
-
+#define MAP
 void get_funcname(unsigned long ip,char* result)
 {
-
+#ifdef MAP
 	iter = map_ip2result.find(ip);
 	if(iter != map_ip2result.end()) {
 		//找到
@@ -106,6 +106,7 @@ void get_funcname(unsigned long ip,char* result)
 		strcpy(result, s);
 		return;
 	}
+#endif
 	FILE *fstream=NULL;  
 	char buff[60]="";      
 	char cmd[60]="addr2line -e /dev/shm/vmlinux -i -f 0x";
@@ -126,9 +127,9 @@ void get_funcname(unsigned long ip,char* result)
 	}
 		printf("%s\n",result);
 	replace(result);
-
+#ifdef MAP
 	map_ip2result[ip] = result;
-
+#endif
 	printf("%s\n",result);
 	pclose(fstream);   
 }
@@ -253,10 +254,10 @@ int main(int argc, char *argv[])
 						while (call_func_stack.top().depth == fg_return.depth)
 						{
 							tmp_stack.push(call_func_stack.top());
-printf("***********111\n");
+
 printf("%d\n",call_func_stack.top().depth);
 							call_func_stack.pop();
-printf("***********222\n");
+
 						}
 						call_func_ip = call_func_stack.top().func;
 						while (!tmp_stack.empty()){
@@ -269,12 +270,13 @@ printf("***********222\n");
 						get_funcname(fg_return.func,result_ip);
 						get_funcname(call_func_ip,result_pip);
 
-						fprintf(out_fp,"PID:%d TID:%d TIME:0x%x ", 
-							ftrace_entry.pid, ftrace_entry.tid, time/*fg_return.calltime*/);
-						fprintf(out_fp,"RETURN_TIME:0x%x ", fg_return.rettime);
+						fprintf(out_fp,"PID:%d TID:%d TIME:0x%016llx ", 
+							ftrace_entry.pid, ftrace_entry.tid, fg_return.calltime);
+						fprintf(out_fp,"RETURN_TIME:0x%016llx ", fg_return.rettime);
 						fprintf(out_fp,"FROM:%s",result_pip);
 						fprintf(out_fp,"TO:%s",result_ip);
-						fprintf(out_fp,"AT:NULL TIME:NULL\n");
+						fprintf(out_fp,"AT:NULL TIME:NULL ");
+						fprintf(out_fp,"DEPT:%d\n", fg_return.depth);
 
 						//printf("PID:%d TID:%d TIME:0x%x RETURN_TIME:0x%x "/*%lld*/, 
 						//	ftrace_entry.pid, ftrace_entry.tid,fg_return.calltime, fg_return.rettime);
@@ -288,7 +290,7 @@ printf("***********222\n");
 						break;
 					}
 					func_stack.pop();
-printf("***********\n");
+
 					call_func_stack.pop();
 				}
 				break;
