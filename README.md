@@ -13,6 +13,8 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
     2. data_ftrace：将其中文件存入手机目录/data/ftrace/，是手机中ftrace相关脚本，由服务器脚本调用
     3. data_powercat：将其中文件存入手机目录/data/powercat/，是手机中能耗监测与传输相关脚本，有服务器调用
  * filesinRemoteServer：包括服务器端（链接了手机）操作手机的各种原子操作
+    1. flash_boot_netftrace.sh与kill_server.sh中有server_sh_location变量，要保持和下面的一致
+    
  * power：包括客户端（web端）中与能耗相关的脚本
     1. db：
        1. EnterDynamic-Nexux5.rb：动态数据入库的ruby脚本，由脚本自动调用，调用方式为：ruby db/EnterDynamic-Nexux5.rb <动态数据保存的目录> android-4.4.3 real arm-Nexus5-${test_case}
@@ -34,7 +36,8 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
   2. 手机连上服务器，在服务器与客户端配置ssh的无密码连接，参考其他->第四条
   3. 在客户端上配置tomcat与测试用例网页（补充）；配置mysql与ruby的运行环境
      * 在数据入库的ruby脚本中制定了使用的数据库名，可以在里面自行修改。
-  4. 在服务器端安装：sudo apt-get install ia32-libs，（64位机器需要安装）
+     * 将编译的内核镜像对应的vmlinux拷贝到clint_sh_location
+  4. 在服务器端安装：sudo apt-get install ia32-libs，（64位机器需要安装），将编译好的内核镜像文件放置于server_sh_location，镜像文件的编译参考其他
   5. 将相关文件拷贝至指定的位置，参考仓库文件说明
   
 # 脚本调用方式
