@@ -46,6 +46,7 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
       * ./auto.sh
   2. 如果没有配置网页则直接运行数据获取脚本：
       * sh ftrace@1.40.sh test msp
+      
 # 运行结果
   1. 在数据库中生成两个表：android-4.4.3_R_arm-Nexus5-${test_case}_DLIST与android-4.4.3_R_arm-Nexus5-${test_case}_DOLIST，后续画SVG图会可以根据这两个表来完成。
 
