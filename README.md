@@ -33,6 +33,7 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
   1. 手机刷ROM（补充），安装busybox与com.example.androidtestusbtethering-1.apk
   2. 手机连上服务器，在服务器与客户端配置ssh的无密码连接，参考其他->第四条
   3. 在客户端上配置tomcat与测试用例网页（补充）；配置mysql与ruby的运行环境
+     * 在数据入库的ruby脚本中制定了使用的数据库名，可以在里面自行修改。
   4. 在服务器端安装：sudo apt-get install ia32-libs，（64位机器需要安装）
   5. 将相关文件拷贝至指定的位置，参考仓库文件说明
   
@@ -41,7 +42,8 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
       * ./auto.sh
   2. 如果没有配置网页则直接运行数据获取脚本：
       * sh ftrace@1.40.sh test msp
-
+# 运行结果
+  1. 在数据库中生成两个表：android-4.4.3_R_arm-Nexus5-${test_case}_DLIST与android-4.4.3_R_arm-Nexus5-${test_case}_DOLIST，后续画SVG图会可以根据这两个表来完成。
 
 
 # 其他
