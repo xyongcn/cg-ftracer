@@ -3,11 +3,48 @@ cg-ftracer
 
 Android kernel dynamic callgraph tracer for ftrace
 
-replace trace.c in kernel-rootdir/kernel/trace/ and build.
-
 注: android版本为4.4.3，代码编号为KTU84m， 内核为msm，分支为android-msm-hammerhead-3.4-kitkat-mr2。
 https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-mr2
 
+# 仓库文件说明：
+ * android_boot_tools_bin：包镜像文件的制作、拆包、解包等工具
+ * filesinN5：
+    1. apk文件用于自动打开N5手机的usb网络（前提：手机与电脑通过usb链接）
+    2. data_ftrace：将其中文件存入手机目录/data/ftrace/，是手机中ftrace相关脚本，由服务器脚本调用
+    3. data_powercat：将其中文件存入手机目录/data/powercat/，是手机中能耗监测与传输相关脚本，有服务器调用
+ * filesinRemoteServer：包括服务器端（链接了手机）操作手机的各种原子操作
+ * power：包括客户端（web端）中与能耗相关的脚本
+    1. db：
+       1. EnterDynamic-Nexux5.rb：动态数据入库的ruby脚本，由脚本自动调用，调用方式为：ruby db/EnterDynamic-Nexux5.rb <动态数据保存的目录> android-4.4.3 real arm-Nexus5-${test_case}
+       2. power_analyse.rb：动态数据入库后调用该脚本进行能耗数据的解析，由脚本自动调用，调用方式为：ruby power_analyse.rb android-4.4.3 real arm-Nexus5-${test_case}，这些参数需要和之前Enter...脚本的参数保持一致。
+       3. power.so：power_analyse.rb依赖的库文件
+    2. auto.sh：循环扫描指定目录下由web界面生成的配置文件，并根据配置文件调用ftrace@1.40.sh进行测试与数据获取、解析、入库的操作。
+    3. ftrace@1.40.sh：实际进测试、数据获取、解析、入库的主要脚本，调用方式为：sh ftrace@1.40.sh <test_case> <test_name> <test_time,可空> <test_serip,可空>，举例：sh ftrace@1.40.sh test msp
+       * 修改脚本中的相关环境变量：
+            1. location和port为服务器的ssh地址与端口
+            2. receiver_location为服务器中数据接收程序位置
+            3. data_location_clint为客户端中间数据的存放位置
+            4. server_sh_location为服务器脚本存放位置
+            5. clint_sh_location为客户端脚本存放位置
+    4. parse-for-all-funcgraph：ftrace中间数据解析程序，需要提前将编译的内核镜像对应的vmlinux拷贝至/dev/shm/目录下。调用方式为parse-for-all-funcgraph <input> <output>
+  * 20141104-ftrace-stable-boot.img和20141104-vmlinux.tar.gz为编译好的内核镜像与对应的vmlinux
+
+# 环境部署（默认操作系统为ubuntu 12.04）
+  1. 手机刷ROM（补充），安装busybox与com.example.androidtestusbtethering-1.apk
+  2. 手机连上服务器，在服务器与客户端配置ssh的无密码连接，参考其他->第四条
+  3. 在客户端上配置tomcat与测试用例网页（补充）；配置mysql与ruby的运行环境
+  4. 在服务器端安装：sudo apt-get install ia32-libs，（64位机器需要安装）
+  5. 将相关文件拷贝至指定的位置，参考仓库文件说明
+  
+# 脚本调用方式
+  1. 在客户端上，如果配置了测试端网页则运行auto.sh：
+      * ./auto.sh
+  2. 如果没有配置网页则直接运行数据获取脚本：
+      * sh ftrace@1.40.sh test msp
+
+
+
+# 其他
 1. N5手机的连接方式
     * adb shell
 2. 利用adb和fastboot替换N5手机的内核
