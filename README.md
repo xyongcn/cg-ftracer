@@ -3,7 +3,7 @@ cg-ftracer
 
 Android kernel dynamic callgraph tracer for ftrace
 
-注: android版本为4.4.3，代码编号为KTU84m， 内核为msm，分支为android-msm-hammerhead-3.4-kitkat-mr2。
+注: android版本为4.4.3，代码编号为KTU84m（google官方代码）， 内核为msm，分支为android-msm-hammerhead-3.4-kitkat-mr2。
 https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-mr2
 
 # 仓库文件说明：
@@ -32,7 +32,7 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
   * 20141104-ftrace-stable-boot.img和20141104-vmlinux.tar.gz为编译好的内核镜像与对应的vmlinux
 
 # 环境部署（默认操作系统为ubuntu 12.04）
-  1. 手机刷ROM（补充），安装busybox与com.example.androidtestusbtethering-1.apk
+  1. 手机刷ROM（ROM包还未上传，需要后续补充），安装busybox与com.example.androidtestusbtethering-1.apk
   2. 手机连上服务器，在服务器与客户端配置ssh的无密码连接，参考其他->第四条
   3. 在客户端上配置tomcat与测试用例网页（补充）；配置mysql与ruby的运行环境
      * 在数据入库的ruby脚本中制定了使用的数据库名，可以在里面自行修改。
@@ -49,6 +49,9 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
 # 运行结果
   1. 在数据库中生成两个表：android-4.4.3_R_arm-Nexus5-${test_case}_DLIST与android-4.4.3_R_arm-Nexus5-${test_case}_DOLIST，后续画SVG图会可以根据这两个表来完成。
 
+# 关于nexus5手机内核的修改
+  1. 主要的修改在trace.c文件中，编译时需要替换<内核根目录>/kernel/trace/trace.c，编译。
+  2. 实验性的修改在ring_buffer.c中，可以实现更多的内存方面的控制，可以不包括在内核的编译中。
 
 # 其他
 1. N5手机的连接方式
