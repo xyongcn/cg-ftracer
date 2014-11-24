@@ -13,6 +13,7 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
     2. data_ftrace：将其中文件存入手机目录/data/ftrace/，是手机中ftrace相关脚本，由服务器脚本调用
     3. data_powercat：将其中文件存入手机目录/data/powercat/，是手机中能耗监测与传输相关脚本，有服务器调用
  * filesinRemoteServer：包括服务器端（链接了手机）操作手机的各种原子操作
+    1. adb_location.sh中包含adb、fastboot工具所在目录
     1. flash_boot_netftrace.sh与kill_server.sh中有server_sh_location变量，要保持和下面的一致
     
  * power：包括客户端（web端）中与能耗相关的脚本
@@ -40,6 +41,7 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
   5. 将相关文件拷贝至指定的位置，参考仓库文件说明
      * 将编译的内核镜像对应的vmlinux拷贝到客户端的clint_sh_location
      * 将内核镜像重命名为boot.img并拷贝到服务器的server_sh_location
+     * 将adb、fastboot工具的目录加入adb_location.sh文件中。
   
 # 脚本调用方式
   1. 在客户端上，如果配置了测试端网页则运行auto.sh：
