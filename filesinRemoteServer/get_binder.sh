@@ -1,4 +1,4 @@
-PATH=$PATH:/home/wjbang/adt-bundle-linux-x86-20131030/sdk/platform-tools
+source adb_location.sh
 adb reboot bootloader
 fastboot flash boot /home/lxu/boot.img
 fastboot reboot

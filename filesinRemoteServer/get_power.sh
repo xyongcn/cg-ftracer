@@ -1,6 +1,5 @@
-echo $PATH
-PATH=$PATH:/home/wjbang/adt-bundle-linux-x86-20131030/sdk/platform-tools
 #adb shell /data/powercat/powercat.sh sence_cpudelay 
+source adb_location.sh
 case $1 in
 	"msp" )
 	test_name="sence_cpudelay" ;;
