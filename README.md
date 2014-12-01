@@ -78,10 +78,10 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
 
 # 关于系统级APK的签名
   1. 需要文件：编译好的apk、签名工具signapk.jar、android代码中的platform.pk8与platform.x509.pem
-        * apk的源代码在本仓库下AndroidTestUSBTethering.zip
-        * signapk.jar由<Android源码根目录>/build/tools/signapk/编译产出,可以在/out/host/...../framework/中找到，本仓库中也有（根目录下）。
-        * 可以在<Android源码根目录>/build/target/product/security/中找到platform.pk8 platform.x509.pem等签名文件
-        * 运行命令：java -jar signapk.jar platform.x509.pem platform.pk8 MyDemo.apk MyDemo_signed.apk 得到具有对应权限的APK
+     * apk的源代码在本仓库下AndroidTestUSBTethering.zip，apk的编译不再另行说明
+     * signapk.jar由<Android源码根目录>/build/tools/signapk/编译产出,可以在/out/host/...../framework/中找到，本仓库中也有（根目录下）。
+     * 可以在<Android源码根目录>/build/target/product/security/中找到platform.pk8 platform.x509.pem等签名文件
+  2. 运行命令：java -jar signapk.jar platform.x509.pem platform.pk8 MyDemo.apk MyDemo_signed.apk 得到具有对应权限的APK
         
 # 其他
 1. N5手机的连接方式
