@@ -5,6 +5,9 @@ Android kernel dynamic callgraph tracer for ftrace
 
 注: android版本为4.4.3，代码编号为KTU84m（google官方代码）， 内核为msm，分支为android-msm-hammerhead-3.4-kitkat-mr2。
 https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-mr2
+# 服务器、客户端的概念：
+  1. 关系：实际上都是服务器，一台（机器A）连接了手机负责数据的采集，另一台（机器B）集成了数据库、画图工具和web，简单的流程是用户通过web访问机器B上的测试web，选定对应的测试用例点击保存，B会通过ssh调用A上的脚本（启动A上的数据接收程序与手机上的相关测试程序），测试完成（超时结束）后数据传送至B，进行后续的解析、入库工作。
+  2. 在以下的文档中，“服务器"指的是机器A（连接了手机），“客户端"指的是机器B
 
 # 仓库文件说明：
  * android_boot_tools_bin：包镜像文件的制作、拆包、解包等工具
@@ -28,12 +31,14 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
             3. data_location_clint为客户端中间数据的存放位置
             4. server_sh_location为服务器脚本存放位置
             5. clint_sh_location为客户端脚本存放位置
+       * 注：在该脚本中指定了运行的时间（测试用）
+       
     4. parse-for-all-funcgraph：ftrace中间数据解析程序，需要提前将编译的内核镜像对应的vmlinux拷贝至/dev/shm/目录下。调用方式为parse-for-all-funcgraph <input> <output>
     5. power.so：power_analyse.rb依赖的库文件
   * 20141104-ftrace-stable-boot.img和20141104-vmlinux.tar.gz为编译好的内核镜像与对应的vmlinux
 
 # 环境部署（默认操作系统为ubuntu 12.04）
-  1. 手机刷ROM（ROM包还未上传，需要后续补充），安装busybox与com.example.androidtestusbtethering-1.apk
+  1. 手机刷ROM（ROM包还未上传，需要后续补充），从头编译的话请参照”关于nexus5手机内核的修改“一节。安装busybox与com.example.androidtestusbtethering-1.apk，自行编译并签名需要参照”关于系统级APK的签名“一节
   2. 手机连上服务器，在服务器与客户端配置ssh的无密码连接，参考其他->第四条
   3. 在客户端上配置tomcat与测试用例网页（补充）；配置mysql与ruby的运行环境
      * 在数据入库的ruby脚本中制定了使用的数据库名，可以在里面自行修改。
@@ -52,10 +57,29 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
 # 运行结果
   1. 在数据库中生成两个表：android-4.4.3_R_arm-Nexus5-${test_case}_DLIST与android-4.4.3_R_arm-Nexus5-${test_case}_DOLIST，后续画SVG图会可以根据这两个表来完成。
 
+# 关于Android的编译：
+  1. 参考网页：http://source.android.com/source/index.html
+  2. 我们现在用的版本：
+        * android版本为4.4.3，代码编号为KTU84m（google官方代码）， 
+        * 内核为msm，分支为android-msm-hammerhead-3.4-kitkat-mr2。 https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-mr2
+  3. 代码下载与编译流程请请根据参考网页中的步骤进行，以下是备注。
+        * repo init时记得加入-b选项：repo init -u https://android.googlesource.com/platform/manifest -b android-4.4.3_r1.1
+        * 预计代码量为15G左右，根据网络环境可能需要重新运行多次repo sync命令（能够断点续传），建议使用ipv6下载（可以断开ipv4下载，正常情况下不用额外配置）
+        * 代码下载成功后，首先修改<Android源码根目录>/system/core/adb/adb.c中的should_drop_privileges()为：`static int should_drop_privileges(){ return 0; }`(即将原函数中所有有效行都注释掉，直接返回0）
+        * 使用lunch aosp_hammerhead-userdebug
+        
 # 关于nexus5手机内核的修改
-  1. 主要的修改在trace.c文件中，编译时需要替换<内核根目录>/kernel/trace/trace.c，编译。
-  2. 实验性的修改在ring_buffer.c中，可以实现更多的内存方面的控制，可以不包括在内核的编译中。
+  1. 我们使用的内核版本为android-msm-hammerhead-3.4-kitkat-mr2，请在https://android.googlesource.com/kernel/msm/自行下载。
+  2. 主要的修改在trace.c文件中，编译时需要替换<内核根目录>/kernel/trace/trace.c，编译。
+  3. 实验性的修改在ring_buffer.c中，可以实现更多的内存方面的控制，但不稳定，可以不包括在内核的编译中。
 
+# 关于系统级APK的签名
+  1. 需要文件：编译好的apk、签名工具signapk.jar、android代码中的platform.pk8与platform.x509.pem
+        * apk的源代码在本仓库下AndroidTestUSBTethering.zip
+        * signapk.jar由<Android源码根目录>/build/tools/signapk/编译产出,可以在/out/host/...../framework/中找到，本仓库中也有（根目录下）。
+        * 可以在<Android源码根目录>/build/target/product/security/中找到platform.pk8 platform.x509.pem等签名文件
+        * 运行命令：java -jar signapk.jar platform.x509.pem platform.pk8 MyDemo.apk MyDemo_signed.apk 得到具有对应权限的APK
+        
 # 其他
 1. N5手机的连接方式
     * adb shell
