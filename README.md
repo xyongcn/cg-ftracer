@@ -20,7 +20,6 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
     1. db：
        1. EnterDynamic-Nexux5.rb：动态数据入库的ruby脚本，由脚本自动调用，调用方式为：ruby db/EnterDynamic-Nexux5.rb <动态数据保存的目录> android-4.4.3 real arm-Nexus5-${test_case}
        2. power_analyse.rb：动态数据入库后调用该脚本进行能耗数据的解析，由脚本自动调用，调用方式为：ruby power_analyse.rb android-4.4.3 real arm-Nexus5-${test_case}，这些参数需要和之前Enter...脚本的参数保持一致。
-       3. power.so：power_analyse.rb依赖的库文件
     2. auto.sh：循环扫描指定目录下由web界面生成的配置文件，并根据配置文件调用ftrace@1.40.sh进行测试与数据获取、解析、入库的操作。
     3. ftrace@1.40.sh：实际进测试、数据获取、解析、入库的主要脚本，调用方式为：sh ftrace@1.40.sh <test_case> <test_name> <test_time,可空> <test_serip,可空>，举例：sh ftrace@1.40.sh test msp
        * 修改脚本中的相关环境变量：
@@ -30,6 +29,7 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
             4. server_sh_location为服务器脚本存放位置
             5. clint_sh_location为客户端脚本存放位置
     4. parse-for-all-funcgraph：ftrace中间数据解析程序，需要提前将编译的内核镜像对应的vmlinux拷贝至/dev/shm/目录下。调用方式为parse-for-all-funcgraph <input> <output>
+    5. power.so：power_analyse.rb依赖的库文件
   * 20141104-ftrace-stable-boot.img和20141104-vmlinux.tar.gz为编译好的内核镜像与对应的vmlinux
 
 # 环境部署（默认操作系统为ubuntu 12.04）
