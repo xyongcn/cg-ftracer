@@ -60,13 +60,13 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
 # 关于Android的编译：
   1. 参考网页：http://source.android.com/source/index.html
   2. 我们现在用的版本：
-        * android版本为4.4.3，代码编号为KTU84m（google官方代码）， 
-        * 内核为msm，分支为android-msm-hammerhead-3.4-kitkat-mr2。 https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-mr2
+     * android版本为4.4.3，代码编号为KTU84m（google官方代码）， 
+     * 内核为msm，分支为android-msm-hammerhead-3.4-kitkat-mr2。 https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-mr2
   3. 代码下载与编译流程请请根据参考网页中的步骤进行，以下是备注。
-        * repo init时记得加入-b选项：repo init -u https://android.googlesource.com/platform/manifest -b android-4.4.3_r1.1
-        * 预计代码量为15G左右，根据网络环境可能需要重新运行多次repo sync命令（能够断点续传），建议使用ipv6下载（可以断开ipv4下载，正常情况下不用额外配置）
-        * 代码下载成功后，首先修改<Android源码根目录>/system/core/adb/adb.c中的should_drop_privileges()为：`static int should_drop_privileges(){ return 0; }`(即将原函数中所有有效行都注释掉，直接返回0）
-        * 使用lunch aosp_hammerhead-userdebug
+     * repo init时记得加入-b选项：repo init -u https://android.googlesource.com/platform/manifest -b android-4.4.3_r1.1
+     * 预计代码量为15G左右，根据网络环境可能需要重新运行多次repo sync命令（能够断点续传），建议使用ipv6下载（可以断开ipv4下载，正常情况下不用额外配置）
+     * 代码下载成功后，首先修改<Android源码根目录>/system/core/adb/adb.c中的should_drop_privileges()为：`static int should_drop_privileges(){ return 0; }`(即将原函数中所有有效行都注释掉，直接返回0）
+     * 使用lunch aosp_hammerhead-userdebug
         
 # 关于nexus5手机内核的修改
   1. 我们使用的内核版本为android-msm-hammerhead-3.4-kitkat-mr2，请在https://android.googlesource.com/kernel/msm/自行下载。
