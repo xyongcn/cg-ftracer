@@ -1,6 +1,9 @@
 cg-ftracer
 ==========
 author：wujingbang@gmail.com
+
+QQ: 19882934
+
 Any questions please ask freely.
 
 注: android版本为4.4.3，代码编号为KTU84m（google官方代码）， 内核为msm，分支为android-msm-hammerhead-3.4-kitkat-mr2。
@@ -86,6 +89,7 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
 2. 利用adb和fastboot替换N5手机的内核
     1. 编译内核生成zImage-dtb
     2. 利用仓库中提供的ramdisk和镜像制作程序制作boot.img
+       * 请确保ramdisk中default.prop里的ro.secure字段为ro.secure=0
     3. ./mkbootimg --base 0 --pagesize 2048 --kernel_offset 0x00008000 --ramdisk_offset 0x02900000 --second_offset 0x00f00000 --tags_offset 0x02700000 --cmdline 'console=ttyHSL0,115200,n8 androidboot.hardware=hammerhead user_debug=31 maxcpus=2 msm_watchdog_v2.enable=1' --kernel {zImage-dtb} --ramdisk {ramdisk.cpio.gz} -o {boot.img}
     4. 替换N5手机内核:
       * adb reboot bootloader
