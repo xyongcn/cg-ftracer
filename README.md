@@ -1,7 +1,7 @@
 cg-ftracer
 ==========
-
-Android kernel dynamic callgraph tracer for ftrace
+author：wujingbang@gmail.com
+Any questions please ask freely.
 
 注: android版本为4.4.3，代码编号为KTU84m（google官方代码）， 内核为msm，分支为android-msm-hammerhead-3.4-kitkat-mr2。
 https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-mr2
