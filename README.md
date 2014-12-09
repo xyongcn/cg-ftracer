@@ -50,7 +50,7 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
      * 将编译的内核镜像对应的vmlinux拷贝到客户端的clint_sh_location
      * 将内核镜像重命名为boot.img并拷贝到服务器的server_sh_location
      * 将adb、fastboot工具的目录加入adb_location.sh文件中。
-  
+  6. 修改ftrace@1.40.sh脚本中的相关环境变量，见仓库文件说明一节power/ftrace@1.40.sh的说明。
 # 脚本调用方式
   1. 在客户端上，如果配置了测试端网页则运行auto.sh：
       * ./auto.sh
