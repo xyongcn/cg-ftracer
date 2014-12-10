@@ -19,7 +19,7 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
     2. data_ftrace：将其中文件存入手机目录/data/ftrace/，是手机中ftrace相关脚本，由服务器脚本调用
     3. data_powercat：将其中文件存入手机目录/data/powercat/，是手机中能耗监测与传输相关脚本，有服务器调用
  * filesinRemoteServer：包括服务器端（链接了手机）操作手机的各种原子操作
-    1. adb_location.sh中包含adb、fastboot工具所在目录
+    1. adb_location.sh中包含adb、fastboot工具所在目录（仓库中也有，为adb.tar.gz）
     1. flash_boot_netftrace.sh与kill_server.sh中有server_sh_location变量，要保持和下面的一致
     
  * power：包括客户端（web端）中与能耗相关的脚本
@@ -39,6 +39,7 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
     4. parse-for-all-funcgraph：ftrace中间数据解析程序，需要提前将编译的内核镜像对应的vmlinux拷贝至/dev/shm/目录下。调用方式为parse-for-all-funcgraph <input> <output>
     5. power.so：power_analyse.rb依赖的库文件
   * 20141104-ftrace-stable-boot.img和20141104-vmlinux.tar.gz为编译好的内核镜像与对应的vmlinux
+  * adb.tar.gz为adb、fastboot工具包
 
 # 环境部署（默认操作系统为ubuntu 12.04）
   1. 手机刷ROM（ROM包还未上传，需要后续补充），从头编译的话请参照”关于nexus5手机内核的修改“一节。安装busybox与com.example.androidtestusbtethering-1.apk，自行编译并签名需要参照”关于系统级APK的签名“一节
@@ -49,7 +50,7 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
   5. 将相关文件拷贝至指定的位置，参考仓库文件说明
      * 将编译的内核镜像对应的vmlinux拷贝到客户端的clint_sh_location
      * 将内核镜像重命名为boot.img并拷贝到服务器的server_sh_location
-     * 将adb、fastboot工具的目录加入adb_location.sh文件中。
+     * 将adb、fastboot工具（解压缩adb.tar.gz）的目录加入adb_location.sh文件中。
   6. 修改ftrace@1.40.sh脚本中的相关环境变量，见仓库文件说明一节power/ftrace@1.40.sh的说明。
 # 脚本调用方式
   1. 在客户端上，如果配置了测试端网页则运行auto.sh：
