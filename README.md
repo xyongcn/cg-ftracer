@@ -48,11 +48,12 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
      * 在数据入库的ruby脚本中制定了使用的数据库名，可以在里面自行修改。
   4. 在服务器端安装：sudo apt-get install ia32-libs，（64位机器需要安装），将编译好的内核镜像文件放置于server_sh_location，镜像文件的编译参考其他
   5. 关于用户权限：连接手机的PC上使用的是root用户，配置web、数据库的PC上使用的是普通用户。
-  5. 将相关文件拷贝至指定的位置，参考仓库文件说明
+  6. 将相关文件拷贝至指定的位置，参考仓库文件说明
      * 将编译的内核镜像对应的vmlinux拷贝到客户端的clint_sh_location
      * 将内核镜像重命名为boot.img并拷贝到服务器的server_sh_location
      * 将adb、fastboot工具（解压缩adb.tar.gz）的目录加入adb_location.sh文件中。
-  6. 修改ftrace@1.40.sh脚本中的相关环境变量，见仓库文件说明一节power/ftrace@1.40.sh的说明。
+  7. 修改ftrace@1.40.sh脚本中的相关环境变量，见仓库文件说明一节power/ftrace@1.40.sh的说明。
+  8. 注：在open_usbnet.sh脚本中的IP地址最好不要修改，这不会影响其他网络的连接。
 # 脚本调用方式
   1. 在客户端上，如果配置了测试端网页则运行auto.sh：
       * ./auto.sh
