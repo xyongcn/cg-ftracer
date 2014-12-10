@@ -1,4 +1,4 @@
-source adb_location.sh
+./adb_location.sh
 adb reboot bootloader
 fastboot flash boot /home/lxu/boot.img
 fastboot reboot
