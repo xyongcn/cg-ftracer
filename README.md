@@ -47,6 +47,7 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
   3. 在客户端上配置tomcat与测试用例网页（补充）；配置mysql与ruby的运行环境
      * 在数据入库的ruby脚本中制定了使用的数据库名，可以在里面自行修改。
   4. 在服务器端安装：sudo apt-get install ia32-libs，（64位机器需要安装），将编译好的内核镜像文件放置于server_sh_location，镜像文件的编译参考其他
+  5. 关于用户权限：连接手机的PC上使用的是root用户，配置web、数据库的PC上使用的是普通用户。
   5. 将相关文件拷贝至指定的位置，参考仓库文件说明
      * 将编译的内核镜像对应的vmlinux拷贝到客户端的clint_sh_location
      * 将内核镜像重命名为boot.img并拷贝到服务器的server_sh_location
