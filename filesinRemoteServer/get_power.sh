@@ -1,5 +1,6 @@
-#adb shell /data/powercat/powercat.sh sence_cpudelay 
-./adb_location.sh
+#/bin/sh
+cd `dirname $0`
+export PATH=${PATH}:`cat adb_location.sh`
 case $1 in
 	"msp" )
 	test_name="sence_cpudelay" ;;

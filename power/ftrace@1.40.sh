@@ -5,10 +5,10 @@ test_serip=$4
 echo $test_case and $test_name and $test_time and $test_serip 
 port=1401
 location="solaris.cs.tsinghua.edu.cn"
-receiver_location="/home/wjbang/ftrace/"
 data_location_clint="home/wjbang/power/"
 server_sh_location="/home/wjbang/ftrace/"
 clint_sh_location="/home/wjbang/power/"
+receiver_location=${server_sh_location}
 
 cp vmlinux /dev/shm/
 ssh root@${location} -p ${port} "${receiver_location}/powercat_server ${receiver_location}/power.dat" &

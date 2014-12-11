@@ -1,4 +1,5 @@
-./adb_location.sh
+cd `dirname $0`
+export PATH=${PATH}:`cat adb_location.sh`
 adb reboot bootloader
 fastboot flash boot /home/lxu/boot.img
 fastboot reboot

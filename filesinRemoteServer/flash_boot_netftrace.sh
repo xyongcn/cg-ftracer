@@ -1,8 +1,8 @@
 #/bin/sh
-
-./adb_location.sh
-server_sh_location="/home/wjbang/ftrace/"
+cd `dirname $0`
+export PATH=${PATH}:`cat adb_location.sh`
+echo ${PATH}
 adb reboot bootloader
-fastboot flash boot ${server_sh_location}/boot.img
+fastboot flash boot boot.img
 fastboot reboot
 sleep 15
