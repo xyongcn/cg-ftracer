@@ -30,10 +30,9 @@ https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-
     3. ftrace@1.40.sh：实际进测试、数据获取、解析、入库的主要脚本，调用方式为：sh ftrace@1.40.sh <test_case> <test_name> <test_time,可空> <test_serip,可空>，举例：sh ftrace@1.40.sh test msp
        * 修改脚本中的相关环境变量：
             1. location和port为服务器的ssh地址与端口
-            2. receiver_location为服务器中数据接收程序位置
-            3. data_location_clint为客户端中间数据的存放位置
-            4. server_sh_location为服务器脚本存放位置
-            5. clint_sh_location为客户端脚本存放位置
+            2. data_location_clint为客户端中间数据的存放位置
+            3. server_sh_location为服务器脚本存放位置
+            4. clint_sh_location为客户端脚本存放位置
        * 注：在该脚本中指定了运行的时间（测试用）
        
     4. parse-for-all-funcgraph：ftrace中间数据解析程序，需要提前将编译的内核镜像对应的vmlinux拷贝至/dev/shm/目录下。调用方式为parse-for-all-funcgraph <input> <output>
