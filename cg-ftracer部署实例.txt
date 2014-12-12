@@ -1,0 +1,241 @@
+硬件需求：
+电脑1：
+192.168.1.40
+系统ubuntu12.04
+用来通过USB线连接手机，控制手机，接受数据中发送出来的能耗的数据power.dat和ftrace发送出来的数据ftrace.dat
+
+电脑2：
+192.168.1.37
+web服务器，上面有部署的分析平台，和tomcat服务器用来上传测试用例，下达测试指令。
+tomcat执行/home/zhangsan/power/auto.sh
+/home/zhangsan/power/auto.sh 调用/home/zhangsan/power/ftrace@1.40.sh通过ssh用来执行192.168.1.37上/home/zhangsan/ftrace/下面的脚本程序。
+192.168.1.37上/home/zhangsan/ftrace/下面的程序通过adb shell执行安卓/data/ftrace/和/data/power下面的脚本。
+
+安卓上的数据先发送到192.168.1.40，然后通过scp拷贝到192.168.1.37上，
+192.168.1.37上面的程序会对数据进行解析，后续处理产生svg图
+
+
+
+一、安卓源码下载和内核编译、刷内核（没有进行）
+1.安装ubuntu12.04 64位，下载android的源代码
+
+
+参考网页：http://source.android.com/source/index.html
+
+
+安装repo
+curl http://android.git.kernel.org/repo >~/bin/repo
+chmod a+x ~/bin/repo
+
+下载android源码 
+mkdir android-source
+cd  android-source
+
+
+
+
+repo init -u https://android.googlesource.com/platform/manifest -b android-4.4.3_r1.1
+
+~/repo sync
+
+
+
+
+
+================================================
+我们现在用的版本：
+android版本为4.4.3，代码编号为KTU84m（google官方代码），
+内核为msm，分支为android-msm-hammerhead-3.4-kitkat-mr2。 https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-mr2
+代码下载与编译流程请请根据参考网页中的步骤进行，以下是备注。
+
+预计代码量为15G左右，根据网络环境可能需要重新运行多次repo sync命令（能够断点续传），建议使用ipv6下载（可以断开ipv4下载，正常情况下不用额外配置）
+代码下载成功后，首先修改/system/core/adb/adb.c中的should_drop_privileges()为：static int should_drop_privileges(){ return 0; }(即将原函数中所有有效行都注释掉，直接返回0）
+
+
+
+=======================================
+
+
+2.对官方的源码代码进行修改（修改ftrace)  （没有进行）
+主要的修改在trace.c文件中，编译时需要替换<内核根目录>/kernel/trace/trace.c
+
+
+
+3.编译内核生成zImage-dtb和vmlinx（用于符号解析） （没有进行）
+source build/envsetup.sh 
+
+lunch
+选择aosp_hammerhead-userdebug
+
+
+安装arm交叉编译工具链
+
+make -j[n]
+
+
+4.进一步处理形成boot.img  （没有进行）
+
+利用仓库中提供的ramdisk和镜像制作程序制作boot.img
+请确保ramdisk中default.prop里的ro.secure字段为ro.secure=0
+./mkbootimg --base 0 --pagesize 2048 --kernel_offset 0x00008000 --ramdisk_offset 0x02900000 --second_offset 0x00f00000 --tags_offset 0x02700000 --cmdline 'console=ttyHSL0,115200,n8 androidboot.hardware=hammerhead user_debug=31 maxcpus=2 msm_watchdog_v2.enable=1' --kernel {zImage-dtb} --ramdisk {ramdisk.cpio.gz} -o {boot.img}
+
+
+
+5.下载安卓sdk  
+  adt-bundle-linux-x86-20131030.tar.gz
+配置adb fastboot路径
+/home/zhangsan/adt-bundle-linux-x86-20131030
+
+
+
+6.利用里面的adb工具和fastboot将boot.img刷入手机
+将手机通过USB线连接到1.40
+打开手机的USB调试选项
+chown  root:root adb fastboot
+chmod a+s   adb fastboot
+
+输入adb devices看是否连接成功。
+
+adb reboot bootloader       #启动手机到fastboot模式
+fastboot flash boot boot.img      #刷入手机内核
+fastboot reboot         #重启手机进入系统
+
+
+
+二、编译手机上的apk文件、安装apk到手机,安装脚本到手机
+1.
+apk的编译 （没有进行）
+
+
+关于系统级APK的签名
+需要文件：编译好的apk、签名工具signapk.jar、android代码中的platform.pk8与platform.x509.pem
+apk的源代码在本仓库下AndroidTestUSBTethering.zip，apk的编译不再另行说明
+signapk.jar由/build/tools/signapk/编译产出,可以在/out/host/...../framework/中找到，本仓库中也有（根目录下）。
+可以在/build/target/product/security/中找到platform.pk8 platform.x509.pem等签名文件
+运行命令：java -jar signapk.jar platform.x509.pem platform.pk8 MyDemo.apk MyDemo_signed.apk 得到具有对应权限的APK
+
+
+
+2.apk的安装
+myming@ubuntu-xyong:/home/zhangsan/ftrace$ adb install /home/myming/cg-ftracer/filesinN5/com.example.androidtestusbtethering-1.apk
+1134 KB/s (257728 bytes in 0.221s)
+        pkg: /data/local/tmp/com.example.androidtestusbtethering-1.apk
+Success
+
+
+2.
+data_ftrace：将其中文件存入手机目录/data/ftrace/，是手机中ftrace相关脚本，由服务器脚本调用
+
+adb push /home/zhangsan/cg-ftracer/filesinN5/data_ftrace/ /data/ftrace
+
+
+3.
+data_powercat：将其中文件存入手机目录/data/powercat/，是手机中能耗监测与传输相关脚本，有服务器调用
+
+adb push /home/zhangsan/cg-ftracer/filesinN5/data_ftrace/ /data/ftrace
+
+三、
+USB网卡配置（没有进行）
+需要在手机 设置、网络共享于便携式热点、USB共享网络选中。
+
+
+ifconfig usb0  192.168.42.x
+
+安卓默认的网卡的ip地址是
+192.168.42.129
+ 
+ 
+ 
+四、控制手机的服务器设置 1.40（root账户登录）
+
+1.
+mkdir -p /home/zhangsan/ftrace
+cp filesinRemoteServer/*  /home/zhangsan/ftrace
+cp 20141104-ftrace-stable-boot.img  /home/zhangsan/ftrace
+cd /home/zhagnsan/ftrace
+mv 20141104-ftrace-stable-boot.img  boot.img
+
+2.
+修改
+flash_boot_netftrace.sh和kill-server.sh
+中的
+server_sh_location="/home/zhangsan/ftrace/"
+
+修改
+adb_location.sh中
+export PATH=$PATH:/home/zhangsan/adt-bundle-linux-x86-20131030/sdk/platform-tools
+
+
+3.
+拷贝adt-bundle-linux-x86-20131030文件夹到/home/zhangsan
+adt-bundle-linux-x86-20131030.tar.gz  #adb.tar.gz
+
+
+五、web服务器端设置1.37(普通账户登录即可）
+1.
+mkdir -p /home/zhangsan
+cp power -R  /home/zhangsan  #将power文件夹拷贝到/home/zhangsan文件夹下
+
+tar 20141104-vmlinux.tar.gz #得到vmliux
+
+cp vmlinux /home/zhangsan/power
+
+cp vmlinux  /dev/shm/
+
+修改 /home/zhangsan/power/ftrace@140.sh中
+port=22
+location="192.168.1.40"
+receiver_location="/home/zhangsan/ftrace/"
+data_location_clint="home/zhangsan/power/"
+server_sh_location="/home/zhangsan/ftrace/"
+clint_sh_location="/home/zhangsan/power/"
+
+
+2.
+apt-get install ia32-libs
+
+3.
+设置web sever（1.37）无密码以root账号ssh 连接手机的机器（1.40）
+以zhangsan账户登录web server
+ssh-keg-gen 一路回车
+将生成的/home/zhangsan/.ssh/id_rsa.pub文件拷贝到1.40机器上
+
+在1.40机器上sudo su切换到root账户
+cat id_rsa.pub >> /root/.ssh/authorized_keys
+
+然后在1.37上以zhangsan登录
+运行ssh root@192.168.1.40，检查确认可以无密码ssh到1.40
+
+
+六、测试
+
+在web服务器上进行如下测试：
+cd /home/zhangsan/power
+
+sh ftrace@1.40.sh test msp
+
+
+七、结果验证
+在1.37上面
+mysql -u root
+
+
+use callgraph
+
+
+mysql> select * from `android-4.4.3_R_arm-Nexus5-test_DLIST` limit 100; 
++---------+---------+------+------------+------+------+-------------+-------------+---------+----------+---------------+
+| F_point | C_point | C_id | Cd_address | PID  | TID  | C_time      | R_time      | RunTime | DLIST_id | E_consumption |
++---------+---------+------+------------+------+------+-------------+-------------+---------+----------+---------------+
+|   10488 |   10748 | NULL | NULL       | 1978 | 1978 | 61472382024 | 61472383274 |       0 |        1 |          NULL |
+|   10486 |   10748 | NULL | NULL       | 1978 | 1978 | 61472385983 | 61472387129 |       0 |        2 |          NULL |
+|   10421 |   10420 | NULL | NULL       | 1978 | 1978 | 61472389420 | 61472390566 |       0 |        3 |          NULL |
+|   10486 |   10421 | NULL | NULL       | 1978 | 1978 | 61472388274 | 61472391608 |       0 |        4 |          NULL |
+|   10488 |   10486 | NULL | NULL       | 1978 | 1978 | 61472384681 | 61472392962 |       0 |        5 |          NULL |
+|       0 |   10488 | NULL | NULL       | 1978 | 1978 | 61472378118 | 61472394056 |       0 |        6 |          NULL |
+|       0 |   10864 | NULL | NULL       | 1978 | 1978 | 61472395201 | 61472396451 |       0 |        7 |          NULL |
+
+
+
+其中 PID  | TID  | C_time      | R_time      是ftrace录入的数据。
+E_consumption 是能耗录入的数据
