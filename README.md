@@ -7,8 +7,8 @@ QQ: 19882934
 Any questions please ask freely.
 
 注: android版本为4.4.3，代码编号为KTU84m（google官方代码）， 内核为msm，分支为android-msm-hammerhead-3.4-kitkat-mr2。
-https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-mr2
-cg-ftracer在清华大学部署实例
+https://android.googlesource.com/kernel/msm/+/android-msm-hammerhead-3.4-kitkat-mr2   
+cg-ftracer在清华大学部署实例  https://github.com/xyongcn/cg-ftracer/blob/master/cg-ftracer%E9%83%A8%E7%BD%B2%E5%AE%9E%E4%BE%8B.txt   
 
 # 服务器、客户端的概念：
   1. 关系：实际上都是服务器，一台（机器A）连接了手机负责数据的采集，另一台（机器B）集成了数据库、画图工具和web，简单的流程是用户通过web访问机器B上的测试web，选定对应的测试用例点击保存，B会通过ssh调用A上的脚本（启动A上的数据接收程序与手机上的相关测试程序），测试完成（超时结束）后数据传送至B，进行后续的解析、入库工作。
